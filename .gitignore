@@ -1,0 +1,11 @@
+# raw public data (re-downloadable; ~4 GB). The built SQLite aggregate IS committed.
+data/*.csv
+
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+node_modules/
+frontend/dist/
