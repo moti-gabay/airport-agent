@@ -74,6 +74,31 @@ the eligibility filter, division-by-zero safety, determinism under row reorderin
 pinning the rule that percentiles are computed across the national set rather than the queried
 subset.
 
+## Evaluation
+
+19 scripted conversations (24 turns) exercise the agent end-to-end against
+live API calls: scope refusals, place-name resolution, follow-up memory
+reuse, and self-compute refusals. Every answer is checked for an
+"Assumptions & uncertainty" section, a successful tool call, and that every
+number in the prose traces back to a tool result.
+
+5 cases (7 of the 24 turns) are flagged by the strict checker. Four are the
+agent computing a derived comparison — a difference or ratio between two
+values already quoted in the same answer — which is correct arithmetic, not
+fabrication. The fifth is the agent offering a hypothetical re-run threshold
+("I can rerun it at, say, 2,000 mi"), which isn't a claim about the data at
+all. See DESIGN.md §4 and §8 for how each is scoped and why the checker
+doesn't auto-accept either.
+
+```bash
+cd backend
+uv run python eval.py          # full suite, ~8 min, real API calls
+uv run python eval.py 3 6      # only sections 3 and 6, faster iteration
+```
+
+Exit code is 0 only when every case passes, so it's CI-ready as-is. Requires
+ANTHROPIC_API_KEY in .env.
+
 ## Rebuilding the database
 
 Only needed to refresh or extend the data.
