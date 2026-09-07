@@ -1,5 +1,6 @@
 # raw public data (re-downloadable; ~4 GB). The built SQLite aggregate IS committed.
 data/*.csv
+data/*.zip
 
 .env
 .venv/
