@@ -18,9 +18,11 @@ from app.data import repository as repo
 from app.scoring import scoring
 
 app = FastAPI(title="Airport Investment Intelligence Agent", version="0.1.0")
+# Any localhost port, because Vite moves to 5174, 5175 and so on when 5173 is taken.
+# Development scope only: a deployment would name its real origin here.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_methods=["*"], allow_headers=["*"],
 )
 
