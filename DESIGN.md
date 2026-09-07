@@ -241,10 +241,12 @@ it at, say, 2,000 mi", is reported like any other claim.
 turns, including the two narrow ones: three phrasings of the New England question return
 identical scores, and the 2,000-mile follow-up re-queries instead of reusing the 1,500-mile
 answer. Four of the five remaining cases are flagged for the comparative arithmetic described
-above ("a 6.5-point gap", "3.8x the departures per runway", "3.6x smaller sample"). The fifth
-is the model offering to rerun at a threshold it names itself, and it is intermittent. None of
-the five is an invented number, and that distinction is the finding: the eval is not green, and
-what it is not green about is documented rather than tuned away.
+above ("a 6.5-point gap", "3.8x the departures per runway", "3.6x smaller sample", and a 14.5
+congestion percentile restated as "less congested than ~85%"). The last is intermittent: the
+inversion is a phrasing choice, and the case passes on runs where the model states the percentile
+directly. The fifth is the model offering to rerun at a threshold it names itself, also
+intermittent. None of the five is an invented number, and that distinction is the finding: the
+eval is not green, and what it is not green about is documented rather than tuned away.
 
 ---
 
@@ -401,3 +403,11 @@ What the eval still does not do is pin expected values. It asserts that every nu
 traceable to a tool result, not that the correct number was quoted, so a scoring regression that
 stayed internally consistent would pass. Anchoring a handful of questions to known figures is
 the natural next step.
+
+It is also looser than it looks on the ambiguous-name cases. Section 4 relaxes the tool check to
+`tools="made"`, accepting a call that was merely issued rather than one that succeeded, because
+`XYZ` is genuinely unresolvable and returns `unknown_airport`, an error result. The same
+relaxation is applied to names that are ambiguous but resolvable. `Springfield` resolves to SGF
+and SPI, and the agent does resolve it, but nothing in the check requires that: a regression that
+asked "which Springfield did you mean?" and resolved nothing would pass just as well. Asserting
+that a named airport was actually resolved is the natural companion to anchoring values.

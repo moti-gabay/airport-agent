@@ -17,9 +17,11 @@ rule is only a sentence in the system prompt, and a prompt edit can quietly loos
 It is strict on purpose, and two known false-alarm classes follow from that. A difference or
 ratio between two tool values ("a 6.5-point gap") is not accepted, because the pairwise closure
 over a few hundred allowed numbers is dense enough that accepting it would let an invented score
-through as well. And a number the model offers rather than asserts ("rerun it at, say, 2,000 mi")
-has no special status. Both are reported with their surrounding sentence so they take a second
-to dismiss. See DESIGN.md section 4.
+through as well. A percentile restated as its complement ("a congestion score of 14.5 is less
+congested than ~85%") is an instance of that class, not an exception to it. And a number the
+model offers rather than asserts ("rerun it at, say, 2,000 mi") has no special status. Both are
+reported with their surrounding sentence so they take a second to dismiss. See DESIGN.md
+section 4.
 """
 
 from __future__ import annotations
