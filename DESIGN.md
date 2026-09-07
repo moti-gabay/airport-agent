@@ -179,7 +179,20 @@ constraint sits at the airport rather than with the airlines.
 | | |
 |---|---|
 | **The model does** | interpret the question; resolve place names to IATA codes ("Santa Ana" to SNA, "Sacramento Metro" to SMF); choose which tools to call with which arguments; decide when a follow-up needs new data or can reuse what is already in the conversation; explain the components in prose; assemble the assumptions section from the fields the tools returned; recognise an out-of-scope question and say so |
-| **The model does not** | compute, weight, rank, average or round any number; decide a threshold; assign a confidence level; choose which airports are eligible; produce a score for an airport the tools did not score |
+| **The model does not** | compute a score, a weight, a percentile or a ranking; decide a threshold; assign a confidence level; choose which airports are eligible; produce a score for an airport the tools did not score |
+
+That second row used to read "compute, weight, rank, average or round any number", which was
+broader than the truth and was written before it was measured. The eval described below shows
+two things the model does do with figures a tool returned, neither of which is fabrication:
+
+- **Display rounding.** It writes 15.8 for a taxi-out time of 15.75, and 21.27M for 21,269,882.
+- **Simple comparative arithmetic.** It relates two values already quoted in the same answer:
+  a 69.6 against a 63.1 becomes "a 6.5-point gap", a 29.6% against a 12.4% becomes "roughly
+  2.4x". The inputs are on the page, so the arithmetic is checkable by the reader.
+
+Neither can move a ranking or invent a quantity the data does not contain, which is what the
+rule is protecting. What remains forbidden is any number that would compete with the scoring
+layer: a re-weighted composite, an averaged score, a percentile for an unscored airport.
 
 Three mechanisms enforce the split rather than merely requesting it. Structurally, the scoring
 module cannot reach the model and the model cannot reach the data except through four typed
@@ -191,6 +204,47 @@ tool did not return is reported as unavailable.
 The failure this design targets is the plausible fabricated statistic. An LLM asked to rank
 airports will happily produce numbers that look right. Here the only numbers in scope are the
 ones a tool returned, and the trace in the UI shows which call produced them.
+
+### Checking that the split holds
+
+`backend/eval.py` runs a fixed list of 19 cases, 24 turns in all, through the real agent: the
+single-turn questions in fresh sessions, the follow-up sequences in one session each. Three
+checks per answer, and two narrower ones on the sections that call for them.
+
+| Check | What it asserts |
+|---|---|
+| assumptions | an "Assumptions & uncertainty" section is present |
+| tools | a tool call succeeded, or was legitimately reused on a follow-up |
+| numbers | every number in the prose is traceable to the tool JSON of that conversation |
+| same_numbers | one region ranking asked three ways returns identical scores |
+| requires | raising the long-haul threshold to 2,000 mi issues a **new** `long_haul_share` call |
+
+The number check is the reason the file exists, and it is stricter than a substring search.
+Tool values are harvested from the whole payload, dict keys and prose included, and a claim
+matches only if a tool value rounds to it at the precision the model actually wrote: 21,269,882
+supports "21.27M", a weight of 0.35 supports "35%", and a round integer may be a rounding of a
+real one within one percent, so 46,987 supports "roughly 47,000" but not "52,000". Failures
+are reported with the sentence around them, because "3.9 is untraceable" is not actionable and
+"3.9 min longer than SNA" is.
+
+**It does not accept a difference or ratio of two tool values as traceable, deliberately.**
+Doing so looks reasonable and would quietly destroy the check. A turn puts on the order of two
+hundred numbers into the allowed set; the set of pairwise differences and ratios over it runs
+to tens of thousands of values, dense enough across the range that an invented score of 88.4
+would stand a good chance of matching one by coincidence and passing. The check would then
+confirm nothing. Keeping it strict costs some false alarms and keeps the one property worth
+having: a number that is not in the data gets flagged. For the same reason the eval has no
+notion of a hypothetical, so a figure the model offers rather than asserts, as in "I can rerun
+it at, say, 2,000 mi", is reported like any other claim.
+
+**Standing result: 14 of 19 cases pass outright.** Every structural check passes on all 24
+turns, including the two narrow ones: three phrasings of the New England question return
+identical scores, and the 2,000-mile follow-up re-queries instead of reusing the 1,500-mile
+answer. Four of the five remaining cases are flagged for the comparative arithmetic described
+above ("a 6.5-point gap", "3.8x the departures per runway", "3.6x smaller sample"). The fifth
+is the model offering to rerun at a threshold it names itself, and it is intermittent. None of
+the five is an invented number, and that distinction is the finding: the eval is not green, and
+what it is not green about is documented rather than tuned away.
 
 ---
 
@@ -328,7 +382,22 @@ In rough order of how much each would improve the answers:
 4. **Runway capacity rather than runway count.** FAA airport capacity benchmarks give actual
    hourly rates under different weather conditions, which is what the runway count is standing in
    for.
-5. **An evaluation set.** A few dozen questions with checked expected numbers, run against the
-   agent, would catch a prompt change that quietly loosens the citation rule. That is the honest
-   gap in the current testing: the scoring layer is tested thoroughly and the agent's behaviour
-   is verified only by inspection.
+
+### Done: the evaluation set
+
+This list used to carry a fifth item, an evaluation set, on the grounds that the scoring layer
+was tested thoroughly while the agent's behaviour was verified only by inspection, so a prompt
+change could loosen the citation rule with nothing to notice. `backend/eval.py` closes that gap:
+19 cases over 24 turns, checking the assumptions section, tool use and the traceability of every
+number, plus phrasing-invariance of a ranking and a forced re-query on a changed threshold.
+
+It stands at 14 of 19 cases passing. Four of the five failures are the comparative arithmetic
+recorded in section 4, differences and ratios between two values quoted in the same answer; the
+fifth is a threshold the model offered to rerun at. None is an invented number. They are left
+failing rather than excused, because the alternative is teaching the check to accept derived
+values, which section 4 explains would cost it the ability to catch a fabrication at all.
+
+What the eval still does not do is pin expected values. It asserts that every number is
+traceable to a tool result, not that the correct number was quoted, so a scoring regression that
+stayed internally consistent would pass. Anchoring a handful of questions to known figures is
+the natural next step.
