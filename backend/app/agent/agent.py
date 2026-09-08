@@ -24,6 +24,8 @@ MODEL = os.getenv("AGENT_MODEL", "claude-opus-5")
 MAX_TOKENS = 4096
 EFFORT = "medium"
 MAX_TOOL_ROUNDS = 6
+# Effort is a Claude 5 control; Haiku 4.5 rejects output_config with a 400.
+OUTPUT_CONFIG = {} if MODEL.startswith("claude-haiku") else {"output_config": {"effort": EFFORT}}
 
 _client: anthropic.Anthropic | None = None
 
@@ -91,7 +93,7 @@ def chat(user_text: str, session_id: str | None = None) -> ChatResult:
     for round_no in range(1, MAX_TOOL_ROUNDS + 1):
         resp = client().messages.create(
             model=MODEL, max_tokens=MAX_TOKENS, system=system, tools=TOOL_SCHEMAS,
-            messages=messages, output_config={"effort": EFFORT},
+            messages=messages, **OUTPUT_CONFIG,
         )
         result.rounds = round_no
         result.stop_reason = resp.stop_reason
@@ -120,8 +122,7 @@ def chat(user_text: str, session_id: str | None = None) -> ChatResult:
         # Ran out of tool rounds: ask for an answer from what has already been gathered.
         resp = client().messages.create(
             model=MODEL, max_tokens=MAX_TOKENS, system=system, tools=TOOL_SCHEMAS,
-            tool_choice={"type": "none"}, messages=messages,
-            output_config={"effort": EFFORT},
+            tool_choice={"type": "none"}, messages=messages, **OUTPUT_CONFIG,
         )
         messages.append({"role": "assistant", "content": resp.content})
         result.answer = _text(resp.content)
