@@ -20,7 +20,7 @@ from app.agent.prompts import system_prompt
 from app.tools import handlers
 from app.tools.schemas import TOOL_SCHEMAS
 
-MODEL = "claude-opus-5"
+MODEL = os.getenv("AGENT_MODEL", "claude-opus-5")
 MAX_TOKENS = 4096
 EFFORT = "medium"
 MAX_TOOL_ROUNDS = 6
