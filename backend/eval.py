@@ -20,8 +20,10 @@ over a few hundred allowed numbers is dense enough that accepting it would let a
 through as well. A percentile restated as its complement ("a congestion score of 14.5 is less
 congested than ~85%") is an instance of that class, not an exception to it. And a number the
 model offers rather than asserts ("rerun it at, say, 2,000 mi") has no special status. Both are
-reported with their surrounding sentence so they take a second to dismiss. See DESIGN.md
-section 4.
+reported with their surrounding sentence so they take a second to dismiss. A third class was
+closed rather than accepted: a unit written flush against the digits ("1500mi") used to be
+mis-tokenized as the shorter number 150 and flagged as untraceable, so CLAIM_RE now lets a
+known unit suffix end a number. See DESIGN.md section 4.
 """
 
 from __future__ import annotations
@@ -142,9 +144,13 @@ NUMBER = r"-?\d+(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?"
 HARVEST_RE = re.compile(NUMBER)
 # A claim is stricter. A digit run inside an identifier is not a claim (the "100" of
 # "T-100"), and a hyphen between two numbers is a range, not a minus sign ("10-15 min").
+# A unit written flush against the digits still ends the number, so "1500mi" is a claim
+# of 1500; without this the match backs off to 150 and fails as untraceable.
+UNITS = r"min|mi|pax|ft"
 CLAIM_RE = re.compile(
     rf"(?<![A-Za-z0-9])(?<![A-Za-z]-)(?<![0-9]-)({NUMBER})"
-    r"\s*(million|billion|thousand|M|B|K|k)?(?:th|st|nd|rd)?(?![A-Za-z])")
+    rf"\s*(million|billion|thousand|M|B|K|k)?(?:th|st|nd|rd)?"
+    rf"(?:(?![A-Za-z])|(?=(?:{UNITS})(?![A-Za-z])))")
 SCALE = {None: 1.0, "thousand": 1e3, "k": 1e3, "K": 1e3, "million": 1e6, "M": 1e6,
          "billion": 1e9, "B": 1e9}
 MINUS = str.maketrans({"\u2212": "-"})  # the model writes a real minus sign, JSON writes a hyphen
