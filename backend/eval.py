@@ -44,6 +44,9 @@ from app.tools import handlers
 # --- the test list ------------------------------------------------------------
 
 
+# assumptions=False and tools="skip" are permissive, not asserting: they do not fail if the
+# model unexpectedly adds an assumptions section or calls a tool on an out-of-scope question.
+# Tightening those to a tri-state assertion is a possible next step, not done.
 @dataclass
 class Turn:
     prompt: str
